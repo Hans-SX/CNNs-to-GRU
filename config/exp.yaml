@@ -9,12 +9,12 @@ ang_length: 125
 
 feature_size: 16
 hidden_size: 64
-seqeunce_length: 100
+sequence_length: 100
 
 # Hyperparameters
 max_epoch: 100
-batch_size: 4
-num_workers: 8
+batch_size: 2
+num_workers: 0
 weight_decay: 0.5                     # Weight decay.
 lr: 0.05                          # Initial learning rate.
 

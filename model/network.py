@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Net(nn.Module):
-    def __init__(self, width, length, output_size=16):
+    def __init__(self, length, width, output_size=16):
         super().__init__()
         i = 0
         re_w = width
@@ -14,7 +14,6 @@ class Net(nn.Module):
             re_l = int(re_l / 2)
             i += 1
         reduced_size = re_w * re_l
-        int(width * length / 2**8)
         self.cnn = nn.Sequential(
             # Layer 1
             nn.Conv2d(1, 8, 4, stride=2, padding=1),       # 1/2
@@ -45,7 +44,7 @@ class Net(nn.Module):
         return out
 
 class ConcatedCNN2GRU(nn.Module):
-    def __init__(self, spa_width, spa_length, ang_width, ang_length, feature_size=16, hidden_size=64, num_layers=1, sequence_length=100):
+    def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size=16, hidden_size=64, num_layers=1, sequence_length=100):
         super(ConcatedCNN2GRU, self).__init__()
         self.num_layers = num_layers
         self.hidden_size  = hidden_size

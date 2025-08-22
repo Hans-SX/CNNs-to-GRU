@@ -2,6 +2,7 @@ import os
 from os.path import join
 from tifffile import imread
 
+import numpy as np
 from torch.utils.data import Dataset
 
 class Hframes_Interval(Dataset):
@@ -28,4 +29,6 @@ class Hframes_Interval(Dataset):
         return len(self.spa)
 
     def __getitem__(self, index):
-        return imread(self.spa[index]), imread(self.ang[index]), self.label[index]
+        imspa = imread(self.spa[index]).astype(np.float32) / 65535
+        imang = imread(self.ang[index]).astype(np.float32) / 65535
+        return np.expand_dims(imspa, axis=1), np.expand_dims(imang, axis=1), self.label[index]
