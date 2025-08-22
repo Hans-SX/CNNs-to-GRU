@@ -1,0 +1,70 @@
+import torch
+from torch import nn
+import torch.nn.functional as F
+
+
+class Net(nn.Module):
+    def __init__(self, width, length, output_size=16):
+        super().__init__()
+        i = 0
+        re_w = width
+        re_l = length
+        while i < 4:
+            re_w = int(re_w / 2)
+            re_l = int(re_l / 2)
+            i += 1
+        reduced_size = re_w * re_l
+        int(width * length / 2**8)
+        self.cnn = nn.Sequential(
+            # Layer 1
+            nn.Conv2d(1, 8, 4, stride=2, padding=1),       # 1/2
+            nn.ELU(),
+            # Layer 2
+            nn.Conv2d(8, 16, 4, stride=2, padding=1),    # 1/2
+            nn.ELU(),
+            # Layer 3
+            nn.Conv2d(16, 32, 4, stride=2, padding=1),  # 1/2
+            nn.ELU(),
+            # Layer 4
+            nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 1/2
+            nn.ELU(),
+            nn.Flatten()
+            )
+        self.fc_layers = nn.Sequential(
+            nn.Linear(reduced_size * 64, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+            nn.Linear(512, output_size),
+            nn.ReLU()
+            )
+
+    def forward(self, x):
+        out = self.cnn(x)
+        out = self.fc_layers(out)
+        return out
+
+class ConcatedCNN2GRU(nn.Module):
+    def __init__(self, spa_width, spa_length, ang_width, ang_length, feature_size=16, hidden_size=64, num_layers=1, sequence_length=100):
+        super(ConcatedCNN2GRU, self).__init__()
+        self.num_layers = num_layers
+        self.hidden_size  = hidden_size
+
+        self.spa_cnn = Net(spa_width, spa_length, feature_size)
+        self.ang_cnn = Net(ang_width, ang_length, feature_size)
+        self.gru = nn.GRU(2 * feature_size, hidden_size, batch_first=True)
+        self.fc1 = nn.Linear(hidden_size, 1)
+
+    def forward(self, spa, ang):
+        spa_feature = list()
+        ang_feature = list()
+        for i in range(spa.shape[1]):
+            spa_feature.append(self.spa_cnn(spa[:,i]))
+            ang_feature.append(self.ang_cnn(ang[:,i]))
+        features = torch.cat((torch.cat(spa_feature, dim=0), torch.cat(ang_feature, dim=0)), dim=1).reshape(spa.shape[0], spa.shape[1], -1)
+        h0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size)
+
+        out,_ = self.gru(features, h0)
+        out = out[:, -1]
+        out = self.fc1(out)
+        return out
