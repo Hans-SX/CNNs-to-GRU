@@ -81,7 +81,7 @@ valset = Hframes_Interval('val')
 
 
 # Dataloader
-trainloader = DataLoader(trainset, config['batch_size'], num_workers=config['num_workers'])
+trainloader = DataLoader(trainset, config['batch_size'], shuffle=True, num_workers=config['num_workers'])
 valloader = DataLoader(valset, config['batch_size'], num_workers=config['num_workers'])
 print(f"Number of batch: {len(trainloader)}/epoch")
 
