@@ -1,5 +1,5 @@
 ---
-exp_name: 'concated_cnn_to_gru'
+exp_name: 'concatenated_cnn_to_gru_lr_1e-4'
 
 # Input parameters.
 spa_width: 100
@@ -12,11 +12,12 @@ hidden_size: 64
 sequence_length: 100
 
 # Hyperparameters
+EPOCHS: 50
 max_epoch: 100
 batch_size: 2
 num_workers: 0
 weight_decay: 0.5                     # Weight decay.
-lr: 0.05                          # Initial learning rate.
+lr: 0.0001                          # Initial learning rate.
 
 # lr_scheduler.MultiStepLR
 step_size: [30, 50, 70]                 # How often to decay learning rate.

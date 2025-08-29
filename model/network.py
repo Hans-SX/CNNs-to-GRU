@@ -43,9 +43,9 @@ class Net(nn.Module):
         out = self.fc_layers(out)
         return out
 
-class ConcatedCNN2GRU(nn.Module):
+class ConcatenatedCNN2GRU(nn.Module):
     def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size=16, hidden_size=64, num_layers=1, sequence_length=100):
-        super(ConcatedCNN2GRU, self).__init__()
+        super(ConcatenatedCNN2GRU, self).__init__()
         self.num_layers = num_layers
         self.hidden_size  = hidden_size
 
