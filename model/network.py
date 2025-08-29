@@ -52,18 +52,29 @@ class ConcatedCNN2GRU(nn.Module):
         self.spa_cnn = Net(spa_width, spa_length, feature_size)
         self.ang_cnn = Net(ang_width, ang_length, feature_size)
         self.gru = nn.GRU(2 * feature_size, hidden_size, batch_first=True)
-        self.fc1 = nn.Linear(hidden_size, 1)
+        self.fc1 = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size//2),
+            nn.ReLU(),
+            nn.Linear(hidden_size//2, 1))
 
     def forward(self, spa, ang):
+        """ spa: (B, seq_len, 1, 140, 100), ang: (B, seq_len, 1, 125, 125) """
+
         spa_feature = list()
         ang_feature = list()
         for i in range(spa.shape[1]):
-            spa_feature.append(self.spa_cnn(spa[:,i]))
-            ang_feature.append(self.ang_cnn(ang[:,i]))
-        features = torch.cat((torch.cat(spa_feature, dim=0), torch.cat(ang_feature, dim=0)), dim=1).reshape(spa.shape[0], spa.shape[1], -1)
+            spa_feature.append(self.spa_cnn(spa[:, i]))
+            ang_feature.append(self.ang_cnn(ang[:, i]))
+
+        spa_feature = torch.stack(spa_feature, dim=1)  # (B, seq_len, feature_size)
+        ang_feature = torch.stack(ang_feature, dim=1)  # (B, seq_len, feature_size)
+        features = torch.cat((spa_feature, ang_feature), dim=2)  # (B, seq_len, 2*feature_size)
+
+        # features = torch.cat((torch.cat(spa_feature, dim=0),
+        #                       torch.cat(ang_feature, dim=0)), dim=1).reshape(spa.shape[0], spa.shape[1], -1)
         h0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size)
 
-        out,_ = self.gru(features, h0)
+        out,_ = self.gru(features, h0)      # out: (BS, L, H_out)
         out = out[:, -1]
         out = self.fc1(out)
         return out
