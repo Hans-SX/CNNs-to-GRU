@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
-from model.network import ConcatedCNN2GRU
+from model.network import ConcatenatedCNN2GRU
 from dataset.HFramesSet import Hframes_Interval
 from utils import train_one_epoch
 
@@ -55,7 +55,7 @@ f_size = config['feature_size']
 h_size = config['hidden_size']
 seq_len = config['sequence_length']
 
-cnn2gru = ConcatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, h_size, sequence_length=seq_len)
+cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, h_size, sequence_length=seq_len)
 
 ########################################
 # Loss function
@@ -93,7 +93,7 @@ print("\n> Training")
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 epoch_number = 0
 
-EPOCHS = 5
+EPOCHS = config["EPOCHS"]
 
 best_vloss = 1_000_000.
 
@@ -112,9 +112,9 @@ for epoch in range(EPOCHS):
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
         for i, vdata in enumerate(valloader):
-            vinputs, vlabels = vdata
-            voutputs = cnn2gru(vinputs)
-            vloss = loss_func(voutputs, vlabels)
+            val_spa, val_ang, vlabels = vdata
+            voutputs = cnn2gru(val_spa, val_ang)
+            vloss = loss_func(voutputs.unsqueeze(1), vlabels)
             running_vloss += vloss
 
     avg_vloss = running_vloss / (i + 1)
@@ -125,6 +125,8 @@ for epoch in range(EPOCHS):
     writer.add_scalars('Training vs. Validation Loss',
                     { 'Training' : avg_loss, 'Validation' : avg_vloss },
                     epoch_number + 1)
+    # writer.add_scalars('train/loss', avg_loss, epoch_number + 1)
+    # writer.add_scalars('val/loss', avg_vloss, epoch_number + 1)
     writer.flush()
 
     # Track best performance, and save the model's state
