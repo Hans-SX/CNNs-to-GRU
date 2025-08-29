@@ -38,7 +38,8 @@ if not os.path.exists(save_root):
     print(f"Create {save_root}")
 
 # Tensorboard
-writer = SummaryWriter(join(os.getcwd(), "results", exp_name, "logs"))
+# writer = SummaryWriter(join(os.getcwd(), "results", exp_name, "logs"))
+writer = SummaryWriter(join(os.getcwd(), "results/logs", exp_name))
 
 # Saving config file
 shutil.copy(config_path, join(save_root, f"{exp_name}.yaml"))
@@ -122,9 +123,12 @@ for epoch in range(EPOCHS):
 
     # Log the running loss averaged per batch
     # for both training and validation
-    writer.add_scalars('Training vs. Validation Loss',
-                    { 'Training' : avg_loss, 'Validation' : avg_vloss },
-                    epoch_number + 1)
+    # writer.add_scalars('Training vs. Validation Loss',
+    #                 { 'Training' : avg_loss, 'Validation' : avg_vloss },
+    #                 epoch_number + 1)
+    writer.add_scalar(f"train/avg_loss", avg_loss, epoch_number + 1)
+    writer.add_scalar(f"val/avg_loss", avg_vloss, epoch_number + 1)
+
     writer.flush()
 
     # Track best performance, and save the model's state
