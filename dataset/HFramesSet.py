@@ -16,13 +16,13 @@ class Hframes_Interval(Dataset):
                 for line in f:
                     path, dis = line.strip().split()
                     self.spa.append(path)
-                    self.label.append(float(dis))
+                    self.label.append(round(float(dis), 2))
         elif typeset == 'val':
             with open('./dataset/val.txt', 'r') as f:
                 for line in f:
                     path, dis = line.strip().split()
                     self.spa.append(path)
-                    self.label.append(float(dis))
+                    self.label.append(round(float(dis), 2))
         self.ang = [x.replace('spatial', 'angular') for x in self.spa]
 
     def __len__(self):
