@@ -1,5 +1,3 @@
-import os
-from os.path import join
 from tifffile import imread
 
 import numpy as np
@@ -17,6 +15,8 @@ class Hframes_Interval(Dataset):
                     path, dis = line.strip().split()
                     self.spa.append(path)
                     self.label.append(round(float(dis), 2))
+                    # if len(self.spa) == 8:
+                    #     break
         elif typeset == 'val':
             with open('./dataset/val.txt', 'r') as f:
                 for line in f:
