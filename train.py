@@ -115,7 +115,7 @@ for epoch in range(EPOCHS):
         for i, vdata in enumerate(valloader):
             val_spa, val_ang, vlabels = vdata
             voutputs = cnn2gru(val_spa, val_ang)
-            vloss = loss_func(voutputs.unsqueeze(1), vlabels)
+            vloss = loss_func(voutputs, vlabels.reshape(-1, 1))
             running_vloss += vloss
 
     avg_vloss = running_vloss / (i + 1)
