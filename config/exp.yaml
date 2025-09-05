@@ -1,5 +1,7 @@
 ---
-exp_name: 'concatenated_cnn_to_gru_Net_v3'
+exp_name: 'concatenated_cnn_to_gru_cuda_Net'
+
+img_model: 'model.network.Net'
 
 # Input parameters.
 spa_width: 100

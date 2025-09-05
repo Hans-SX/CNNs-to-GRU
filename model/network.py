@@ -99,13 +99,14 @@ class Net_v3(nn.Module):
         return out
     
 class ConcatenatedCNN2GRU(nn.Module):
-    def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size=16, hidden_size=64, num_layers=1, sequence_length=100):
+    def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size, img_model, device, hidden_size=64, num_layers=1, sequence_length=100):
         super(ConcatenatedCNN2GRU, self).__init__()
         self.num_layers = num_layers
         self.hidden_size  = hidden_size
+        self.device = device
 
-        self.spa_cnn = Net_v3(spa_width, spa_length, feature_size)
-        self.ang_cnn = Net_v3(ang_width, ang_length, feature_size)
+        self.spa_cnn = img_model(spa_width, spa_length, feature_size)
+        self.ang_cnn = img_model(ang_width, ang_length, feature_size)
         self.gru = nn.GRU(2 * feature_size, hidden_size, batch_first=True)
         self.fc1 = nn.Sequential(
             nn.Linear(hidden_size, hidden_size//2),
@@ -127,7 +128,7 @@ class ConcatenatedCNN2GRU(nn.Module):
 
         # features = torch.cat((torch.cat(spa_feature, dim=0),
         #                       torch.cat(ang_feature, dim=0)), dim=1).reshape(spa.shape[0], spa.shape[1], -1)
-        h0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size)
+        h0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size).to(self.device)
 
         out,_ = self.gru(features, h0)      # out: (BS, L, H_out)
         out = out[:, -1]

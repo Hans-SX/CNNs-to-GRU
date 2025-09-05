@@ -1,12 +1,20 @@
+import importlib
 
+def get_class(class_path):
+    module_name, class_name = class_path.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
 
-def train_one_epoch(epoch_index, tb_writer, dataloader, optimizer, model, loss_func):
+def train_one_epoch(epoch_index, tb_writer, dataloader, optimizer, model, loss_func, device):
     running_loss = 0.
     last_loss = 0.
 
     for i, data in enumerate(dataloader):
         # Every data instance is an input + label pair
         spa, ang, labels = data
+        spa = spa.to(device)
+        ang = ang.to(device)
+        labels = labels.to(device)
 
         # Zero your gradients for every batch!
         optimizer.zero_grad()

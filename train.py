@@ -13,8 +13,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 from model.network import ConcatenatedCNN2GRU
 from dataset.HFramesSet import Hframes_Interval
-from utils import train_one_epoch
+from utils import get_class, train_one_epoch
 
+########################################
+# Device configuration
+########################################
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print("Train on device: ", device)
 
 ########################################
 # Environment and Experiment setting
@@ -55,8 +60,9 @@ ang_length = config['ang_length']
 f_size = config['feature_size']
 h_size = config['hidden_size']
 seq_len = config['sequence_length']
+img_model = get_class(config['img_model'])
 
-cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, h_size, sequence_length=seq_len)
+cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
 
 ########################################
 # Loss function
@@ -103,7 +109,7 @@ for epoch in range(EPOCHS):
 
     # Make sure gradient tracking is on, and do a pass over the data
     cnn2gru.train(True)
-    avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, cnn2gru, loss_func)
+    avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, cnn2gru, loss_func, device)
 
     running_vloss = 0.0
     # Set the model to evaluation mode, disabling dropout and using population
@@ -114,6 +120,10 @@ for epoch in range(EPOCHS):
     with torch.no_grad():
         for i, vdata in enumerate(valloader):
             val_spa, val_ang, vlabels = vdata
+            val_spa = val_spa.to(device)
+            val_ang = val_ang.to(device)
+            vlabels = vlabels.to(device)
+
             voutputs = cnn2gru(val_spa, val_ang)
             vloss = loss_func(voutputs, vlabels.reshape(-1, 1))
             running_vloss += vloss
