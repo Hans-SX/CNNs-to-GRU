@@ -10,7 +10,7 @@ class Hframes_Interval(Dataset):
         self.ang = list()
         self.label = list()
         if typeset == 'train':
-            with open('./dataset/train.txt', 'r') as f:
+            with open(r'Y:\cpi_tracking\simulated_data\nn_data_5k\tiff_paths.txt', 'r') as f:
                 for line in f:
                     path, dis = line.strip().split()
                     self.spa.append(path)
@@ -18,7 +18,7 @@ class Hframes_Interval(Dataset):
                     # if len(self.spa) == 8:
                     #     break
         elif typeset == 'val':
-            with open('./dataset/val.txt', 'r') as f:
+            with open(r'Y:\cpi_tracking\simulated_data\nn_data_1k\tiff_paths.txt', 'r') as f:
                 for line in f:
                     path, dis = line.strip().split()
                     self.spa.append(path)
