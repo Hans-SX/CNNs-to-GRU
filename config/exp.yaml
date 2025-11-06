@@ -1,15 +1,15 @@
 ---
-exp_name: 'concatenated_cnn_to_gru_cuda_Net'
+exp_name: 'sim_1st'
 
-img_model: 'model.network.Net'
+img_model: 'model.network.Net_v2'
 
 # Input parameters.
-spa_width: 100
-spa_length: 140
-ang_width: 125
-ang_length: 125
+spa_width: 153
+spa_length: 153
+ang_width: 128
+ang_length: 128
 
-feature_size: 16
+feature_size: 32
 hidden_size: 64
 sequence_length: 100
 

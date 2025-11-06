@@ -23,7 +23,7 @@ class Hframes_Interval(Dataset):
                     path, dis = line.strip().split()
                     self.spa.append(path)
                     self.label.append(round(float(dis), 2))
-        self.ang = [x.replace('spatial', 'angular') for x in self.spa]
+        self.ang = [x.replace('spatial', 'angular').replace('DetectorA', 'DetectorB') for x in self.spa]
 
     def __len__(self):
         return len(self.spa)
