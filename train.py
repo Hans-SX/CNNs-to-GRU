@@ -11,140 +11,146 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
-from model.network import ConcatenatedCNN2GRU
+from model.network import ConcatImg2Recur
 from dataset.HFramesSet import Hframes_Interval
 from utils import get_class, train_one_epoch
 
-########################################
-# Device configuration
-########################################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print("Train on device: ", device)
 
-########################################
-# Environment and Experiment setting
-########################################
-# Parse arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('--exp', type=str, default='exp')
-args = parser.parse_args()
+if __name__ == '__main__':
 
-# Load experiment config
-config_path = join("./config/", f"{args.exp}.yaml")
-with open(config_path, 'r') as f:
-    config = yaml.safe_load(f)
-exp_name = config['exp_name']
-print(f"EXP: {exp_name}")
+    ########################################
+    # Device configuration
+    ########################################
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("Train on device: ", device)
 
-# Create saving directory
-save_root = join(os.getcwd(), "results", exp_name)
-if not os.path.exists(save_root):
-    os.makedirs(save_root)
-    print(f"Create {save_root}")
+    ########################################
+    # Environment and Experiment setting
+    ########################################
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--exp', type=str, default='exp')
+    args = parser.parse_args()
 
-# Tensorboard
-# writer = SummaryWriter(join(os.getcwd(), "results", exp_name, "logs"))
-writer = SummaryWriter(join(os.getcwd(), "results/logs", exp_name))
+    # Load experiment config
+    config_path = join("./config/", f"{args.exp}.yaml")
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    exp_name = config['exp_name']
+    print(f"EXP: {exp_name}")
 
-# Saving config file
-shutil.copy(config_path, join(save_root, f"{exp_name}.yaml"))
+    # Create saving directory
+    save_root = join(os.getcwd(), "results", exp_name)
+    if not os.path.exists(save_root):
+        os.makedirs(save_root)
+        print(f"Create {save_root}")
 
-########################################
-# Model
-########################################
+    # Tensorboard
+    # writer = SummaryWriter(join(os.getcwd(), "results", exp_name, "logs"))
+    writer = SummaryWriter(join(os.getcwd(), "results/logs", exp_name))
 
-spa_width = config['spa_width']
-spa_length = config['spa_length']
-ang_width = config['ang_width']
-ang_length = config['ang_length']
-f_size = config['feature_size']
-h_size = config['hidden_size']
-seq_len = config['sequence_length']
-img_model = get_class(config['img_model'])
+    # Saving config file
+    shutil.copy(config_path, join(save_root, f"{exp_name}.yaml"))
 
-cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
+    ########################################
+    # Model
+    ########################################
 
-########################################
-# Loss function
-########################################
-loss_func = nn.L1Loss()
+    spa_width = config['spa_width']
+    spa_length = config['spa_length']
+    ang_width = config['ang_width']
+    ang_length = config['ang_length']
+    f_size = config['feature_size']
+    h_size = config['hidden_size']
+    seq_len = config['sequence_length']
+    img_model = get_class(config['img_model'])
+    recur_model = get_class(config['recur_model'])
 
-########################################
-# Optimizer & Scheduler
-########################################
-optimizer = Adam(list(cnn2gru.parameters()), config['lr'], weight_decay=config['weight_decay'])
+    # cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
+    cnn2gru = ConcatImg2Recur(spa_length, spa_width, ang_length, ang_width, f_size, img_model, recur_model, device, h_size, sequence_length=seq_len).to(device)
 
-scheduler = lr_scheduler.MultiStepLR(
-    optimizer, config["step_size"], config["gamma"])
-# scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=config['Tmax'], eta_min=config['eta_min'])
+    ########################################
+    # Loss function
+    ########################################
+    loss_func = nn.L1Loss()
+    # loss_func = nn.MSELoss()
 
-########################################
-# Data loader
-########################################
-# Dataset
-trainset = Hframes_Interval()
-valset = Hframes_Interval('val')
+    ########################################
+    # Optimizer & Scheduler
+    ########################################
+    optimizer = Adam(list(cnn2gru.parameters()), float(config['lr']), weight_decay=config['weight_decay'])
+
+    scheduler = lr_scheduler.MultiStepLR(
+        optimizer, config["step_size"], config["gamma"])
+    # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=config['Tmax'], eta_min=config['eta_min'])
+
+    ########################################
+    # Data loader
+    ########################################
+    # Dataset
+    trainset = Hframes_Interval()
+    valset = Hframes_Interval('val')
 
 
-# Dataloader
-trainloader = DataLoader(trainset, config['batch_size'], shuffle=True, num_workers=config['num_workers'])
-valloader = DataLoader(valset, config['batch_size'], num_workers=config['num_workers'])
-print(f"Number of batch: {len(trainloader)}/epoch")
+    # Dataloader
+    trainloader = DataLoader(trainset, config['batch_size'], shuffle=True, num_workers=config['num_workers'])
+    valloader = DataLoader(valset, config['batch_size'], num_workers=config['num_workers'])
+    print(f"Number of batch: {len(trainloader)}/epoch")
 
-########################################
-# Start training
-########################################
-print("\n> Training")
+    ########################################
+    # Start training
+    ########################################
+    print("\n> Training")
 
-# Initializing in a separate cell so we can easily add more epochs to the same run
-timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-epoch_number = 0
+    # Initializing in a separate cell so we can easily add more epochs to the same run
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    epoch_number = 0
 
-EPOCHS = config["EPOCHS"]
+    EPOCHS = config["EPOCHS"]
 
-best_vloss = 1_000_000.
+    best_vloss = 1_000_000.
 
-for epoch in range(EPOCHS):
-    print('EPOCH {}:'.format(epoch_number + 1))
+    for epoch in range(EPOCHS):
+        print('EPOCH {}:'.format(epoch_number + 1))
 
-    # Make sure gradient tracking is on, and do a pass over the data
-    cnn2gru.train(True)
-    avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, cnn2gru, loss_func, device)
+        # Make sure gradient tracking is on, and do a pass over the data
+        cnn2gru.train(True)
+        avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, cnn2gru, loss_func, device)
 
-    running_vloss = 0.0
-    # Set the model to evaluation mode, disabling dropout and using population
-    # statistics for batch normalization.
-    cnn2gru.eval()
+        running_vloss = 0.0
+        # Set the model to evaluation mode, disabling dropout and using population
+        # statistics for batch normalization.
+        cnn2gru.eval()
 
-    # Disable gradient computation and reduce memory consumption.
-    with torch.no_grad():
-        for i, vdata in enumerate(valloader):
-            val_spa, val_ang, vlabels = vdata
-            val_spa = val_spa.to(device)
-            val_ang = val_ang.to(device)
-            vlabels = vlabels.to(device)
+        # Disable gradient computation and reduce memory consumption.
+        with torch.no_grad():
+            for i, vdata in enumerate(valloader):
+                val_spa, val_ang, vlabels = vdata
+                val_spa = val_spa.to(device)
+                val_ang = val_ang.to(device)
+                vlabels = vlabels.to(device).float()
 
-            voutputs = cnn2gru(val_spa, val_ang)
-            vloss = loss_func(voutputs, vlabels.reshape(-1, 1))
-            running_vloss += vloss
+                voutputs = cnn2gru(val_spa, val_ang)
+                vloss = loss_func(voutputs, vlabels.reshape(-1, 1))
+                running_vloss += vloss
 
-    avg_vloss = running_vloss / (i + 1)
-    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+        avg_vloss = running_vloss / (i + 1)
+        print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
 
-    # Log the running loss averaged per batch
-    # for both training and validation
-    # writer.add_scalars('Training vs. Validation Loss',
-    #                 { 'Training' : avg_loss, 'Validation' : avg_vloss },
-    #                 epoch_number + 1)
-    writer.add_scalar(f"train/avg_loss", avg_loss, epoch_number + 1)
-    writer.add_scalar(f"val/avg_loss", avg_vloss, epoch_number + 1)
+        # Log the running loss averaged per batch
+        # for both training and validation
+        # writer.add_scalars('Training vs. Validation Loss',
+        #                 { 'Training' : avg_loss, 'Validation' : avg_vloss },
+        #                 epoch_number + 1)
+        writer.add_scalar(f"train/avg_loss", avg_loss, epoch_number + 1)
+        writer.add_scalar(f"val/avg_loss", avg_vloss, epoch_number + 1)
 
-    writer.flush()
+        writer.flush()
 
-    # Track best performance, and save the model's state
-    if avg_vloss < best_vloss:
-        best_vloss = avg_vloss
-        model_path = 'cnn2gru_{}_{}'.format(timestamp, epoch_number)
-        torch.save(cnn2gru.state_dict(), join(save_root, model_path))
+        # Track best performance, and save the model's state
+        if avg_vloss < best_vloss:
+            best_vloss = avg_vloss
+            model_path = 'cnn2gru_{}_{}'.format(timestamp, epoch_number+1)
+            torch.save(cnn2gru.state_dict(), join(save_root, model_path))
 
-    epoch_number += 1
+        epoch_number += 1
