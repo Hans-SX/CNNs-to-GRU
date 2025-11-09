@@ -14,7 +14,7 @@ def train_one_epoch(epoch_index, tb_writer, dataloader, optimizer, model, loss_f
         spa, ang, labels = data
         spa = spa.to(device)
         ang = ang.to(device)
-        labels = labels.to(device)
+        labels = labels.to(device).float()
 
         # Zero your gradients for every batch!
         optimizer.zero_grad()
