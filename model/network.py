@@ -109,7 +109,7 @@ class ConcatImg2Recur(nn.Module):
 
         self.spa_cnn = img_model(spa_width, spa_length, feature_size)
         self.ang_cnn = img_model(ang_width, ang_length, feature_size)
-        self.gru = recur_model(2 * feature_size, hidden_size, batch_first=True)
+        self.recur = recur_model(2 * feature_size, hidden_size, batch_first=True)
         self.fc1 = nn.Sequential(
             nn.Linear(hidden_size, hidden_size//2),
             nn.ReLU(),
@@ -130,9 +130,14 @@ class ConcatImg2Recur(nn.Module):
 
         # features = torch.cat((torch.cat(spa_feature, dim=0),
         #                       torch.cat(ang_feature, dim=0)), dim=1).reshape(spa.shape[0], spa.shape[1], -1)
-        h0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size).to(self.device)
+        if type(self.recur) == nn.LSTM:
+            h0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size).to(self.device)
+            c0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size).to(self.device)
+            init0 = (h0, c0)
+        elif type(self.recur) == nn.GRU:
+            init0 = torch.zeros(self.num_layers, features.shape[0], self.hidden_size).to(self.device)
 
-        out,_ = self.gru(features, h0)      # out: (BS, L, H_out)
+        out,_ = self.recur(features, init0)      # out: (BS, L, H_out)
         out = out[:, -1]
         out = self.fc1(out)
         return out
