@@ -1,0 +1,34 @@
+---
+exp_name: 'sim_Netv3_resnet34_LSTM_lr1e-5_f128h128_L1Loss_transformer'
+
+model_type: transformer
+
+img_model: 'model.network.Net_v3'
+
+recur_model:
+
+# Input parameters.
+spa_width: 153
+spa_length: 153
+ang_width: 128
+ang_length: 128
+
+feature_size: 128
+hidden_size: 128
+sequence_length: 100
+
+# Hyperparameters
+EPOCHS: 50
+# max_epoch: 100
+batch_size: 8
+num_workers: 8
+weight_decay: 0.5                     # Weight decay.
+lr: 1e-5                          # Initial learning rate.
+
+# lr_scheduler.MultiStepLR
+step_size: [20, 30, 70]                 # How often to decay learning rate.
+gamma: 0.1                          # How much to decay learning rate.
+
+# lr_scheduler.CosineAnnealingLR
+eta_min: 0.0001                     # Minimum learning rate.
+Tmax: 30                            # Periodic epochs of reducing learning rate.
