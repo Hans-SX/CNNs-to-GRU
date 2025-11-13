@@ -99,7 +99,8 @@ class Net_v3(nn.Module):
     def forward(self, x):
         out = self.cnn(x)
         return out
-    
+
+
 class ConcatImg2Recur(nn.Module):
     def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size, img_model, recur_model, device, hidden_size=64, num_layers=1, sequence_length=100):
         super(ConcatImg2Recur, self).__init__()
@@ -139,5 +140,49 @@ class ConcatImg2Recur(nn.Module):
 
         out,_ = self.recur(features, init0)      # out: (BS, L, H_out)
         out = out[:, -1]
+        out = self.fc1(out)
+        return out
+
+
+class ConcatImg2Transformer(nn.Module):
+    def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size, img_model, recur_model, device, hidden_size=64, num_layers=1, sequence_length=100):
+        super().__init__()
+        self.num_layers = num_layers
+        self.hidden_size  = hidden_size
+        self.device = device
+
+        self.cnn = img_model(spa_width, spa_length, feature_size)
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=2*feature_size, nhead=4, dim_feedforward=hidden_size,
+            batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
+
+        self.fc1 = nn.Sequential(
+            nn.LayerNorm(2*hidden_size),
+            nn.Linear(2*hidden_size, hidden_size//2),
+            nn.ReLU(),
+            nn.Linear(hidden_size//2, 1))
+
+    def forward_visual_features(self, spa, ang):
+        Bs, Ts, Cs, Hs, Ws = spa.shape
+        Ba, Ta, Ca, Ha, Wa = ang.shape
+
+        spa = spa.view(Bs*Ts, Cs, Hs, Ws)
+        ang = ang.view(Ba*Ta, Ca, Ha, Wa)
+
+        spa_feature = self.cnn(spa).view(Bs, Ts, -1)
+        ang_feature = self.cnn(ang).view(Ba, Ta, -1)
+
+        features = torch.cat((spa_feature, ang_feature), dim=2)  # (B, seq_len, 2*feature_size)
+        return features
+
+    def forward(self, spa, ang):
+        """ spa: (B, seq_len, 1, 140, 100), ang: (B, seq_len, 1, 125, 125) """
+
+        features = self.forward_visual_features(spa, ang)   # (B, seq_len, 2*feature_size)
+
+        features = self.transformer_encoder(features)
+        out = features.mean(dim=1)                     # Average pooling
         out = self.fc1(out)
         return out
