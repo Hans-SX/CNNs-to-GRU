@@ -67,7 +67,11 @@ if __name__ == '__main__':
     recur_model = get_class(config['recur_model']) if config['recur_model'] is not None else ""
 
     if config.get("model_type") == "transformer":
-        cnn2gru = ConcatImg2Transformer(spa_length, spa_width, ang_length, ang_width, f_size, img_model, recur_model, device, h_size, sequence_length=seq_len).to(device)
+        cnn2gru = ConcatImg2Transformer(
+            spa_length, spa_width, ang_length, ang_width, f_size, img_model,
+            recur_model, device, h_size, sequence_length=seq_len,
+            scale=config.get("dist_scale")
+        ).to(device)
 
     else:
         # cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
@@ -76,8 +80,8 @@ if __name__ == '__main__':
     ########################################
     # Loss function
     ########################################
-    loss_func = nn.L1Loss()
-    # loss_func = nn.MSELoss()
+    # loss_func = nn.L1Loss()
+    loss_func = nn.MSELoss()
 
     ########################################
     # Optimizer & Scheduler
@@ -158,3 +162,4 @@ if __name__ == '__main__':
             torch.save(cnn2gru.state_dict(), join(save_root, model_path))
 
         epoch_number += 1
+        scheduler.step()

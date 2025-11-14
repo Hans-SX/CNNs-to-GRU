@@ -144,9 +144,31 @@ class ConcatImg2Recur(nn.Module):
         return out
 
 
-class ConcatImg2Transformer(nn.Module):
-    def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size, img_model, recur_model, device, hidden_size=64, num_layers=1, sequence_length=100):
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=200):
         super().__init__()
+        pe = torch.zeros(max_len, d_model)  # [T, D]
+        position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2, dtype=torch.float32) *
+            (-torch.log(torch.tensor(10000.0)) / d_model)
+        )
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.register_buffer("pe", pe)  # [T, D]
+
+    def forward(self, x):
+        # x: [B, T, D]
+        T = x.size(1)
+        return x + self.pe[:T].unsqueeze(0)  # [1, T, D] broadcast
+
+
+class ConcatImg2Transformer(nn.Module):
+    def __init__(self, spa_length, spa_width, ang_length, ang_width,
+                 feature_size, img_model, recur_model, device, hidden_size=64,
+                 num_layers=1, sequence_length=100, scale=7):
+        super().__init__()
+        self.scale = scale
         self.num_layers = num_layers
         self.hidden_size  = hidden_size
         self.device = device
@@ -154,15 +176,17 @@ class ConcatImg2Transformer(nn.Module):
         self.cnn = img_model(spa_width, spa_length, feature_size)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=2*feature_size, nhead=4, dim_feedforward=hidden_size,
-            batch_first=True)
+            d_model=2*feature_size, nhead=8, dim_feedforward=2048, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
 
         self.fc1 = nn.Sequential(
-            nn.LayerNorm(2*hidden_size),
-            nn.Linear(2*hidden_size, hidden_size//2),
-            nn.ReLU(),
-            nn.Linear(hidden_size//2, 1))
+            nn.Linear(2*feature_size, hidden_size),
+            nn.LeakyReLU(),
+            nn.Linear(hidden_size, 1))
+
+        # Theoretically, not necessary
+        self.pos_enc = None
+        # self.pos_enc = PositionalEncoding(d_model=2*feature_size, max_len=100)
 
     def forward_visual_features(self, spa, ang):
         Bs, Ts, Cs, Hs, Ws = spa.shape
@@ -182,7 +206,12 @@ class ConcatImg2Transformer(nn.Module):
 
         features = self.forward_visual_features(spa, ang)   # (B, seq_len, 2*feature_size)
 
+        if self.pos_enc:
+            features = self.pos_enc(features)
         features = self.transformer_encoder(features)
-        out = features.mean(dim=1)                     # Average pooling
+
+        out = features[:, -1]   # Last one looks better than average pooling (.mean(dim=1))
         out = self.fc1(out)
+        if self.scale:
+            out = torch.tanh(out) * self.scale
         return out
