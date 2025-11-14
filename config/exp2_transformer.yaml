@@ -17,8 +17,10 @@ feature_size: 128
 hidden_size: 128
 sequence_length: 100
 
+dist_scale: 7                   # The distance range
+
 # Hyperparameters
-EPOCHS: 50
+EPOCHS: 100
 # max_epoch: 100
 batch_size: 8
 num_workers: 8
@@ -26,8 +28,8 @@ weight_decay: 0.5                     # Weight decay.
 lr: 1e-5                          # Initial learning rate.
 
 # lr_scheduler.MultiStepLR
-step_size: [20, 30, 70]                 # How often to decay learning rate.
-gamma: 0.1                          # How much to decay learning rate.
+step_size: [30, 60, 90]                 # How often to decay learning rate.
+gamma: 0.5                          # How much to decay learning rate.
 
 # lr_scheduler.CosineAnnealingLR
 eta_min: 0.0001                     # Minimum learning rate.
