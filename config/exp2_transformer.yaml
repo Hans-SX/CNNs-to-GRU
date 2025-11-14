@@ -1,5 +1,5 @@
 ---
-exp_name: 'sim_Netv3_resnet34_LSTM_lr1e-5_f128h128_L1Loss_transformer'
+exp_name: 'sim_Netv3_resnet34_transformer_lr1e-5_f128h128_MSELoss'
 
 model_type: transformer
 
