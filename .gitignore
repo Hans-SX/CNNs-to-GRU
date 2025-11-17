@@ -2,6 +2,7 @@ results/
 model/__pycache__/*
 dataset/__pycache__/*
 dataset/datalink
+data/
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
