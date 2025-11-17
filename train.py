@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
-from model.network import ConcatImg2Recur
+from model.network import ConcatImg2Recur, ConcatImg2Transformer
 from dataset.HFramesSet import Hframes_Interval
 from utils import get_class, train_one_epoch
 
@@ -64,16 +64,24 @@ if __name__ == '__main__':
     h_size = config['hidden_size']
     seq_len = config['sequence_length']
     img_model = get_class(config['img_model'])
-    recur_model = get_class(config['recur_model'])
+    recur_model = get_class(config['recur_model']) if config['recur_model'] is not None else ""
 
-    # cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
-    cnn2gru = ConcatImg2Recur(spa_length, spa_width, ang_length, ang_width, f_size, img_model, recur_model, device, h_size, sequence_length=seq_len).to(device)
+    if config.get("model_type") == "transformer":
+        cnn2gru = ConcatImg2Transformer(
+            spa_length, spa_width, ang_length, ang_width, f_size, img_model,
+            recur_model, device, h_size, sequence_length=seq_len,
+            scale=config.get("dist_scale")
+        ).to(device)
+
+    else:
+        # cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
+        cnn2gru = ConcatImg2Recur(spa_length, spa_width, ang_length, ang_width, f_size, img_model, recur_model, device, h_size, sequence_length=seq_len).to(device)
 
     ########################################
     # Loss function
     ########################################
-    loss_func = nn.L1Loss()
-    # loss_func = nn.MSELoss()
+    # loss_func = nn.L1Loss()
+    loss_func = nn.MSELoss()
 
     ########################################
     # Optimizer & Scheduler
@@ -154,3 +162,4 @@ if __name__ == '__main__':
             torch.save(cnn2gru.state_dict(), join(save_root, model_path))
 
         epoch_number += 1
+        scheduler.step()
