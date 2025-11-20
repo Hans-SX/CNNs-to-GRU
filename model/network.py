@@ -1,92 +1,11 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torchvision.models import resnet50, resnet18, resnet34
-
-
-class Net(nn.Module):
-    def __init__(self, length, width, output_size=128):
-        super().__init__()
-        i = 0
-        re_w = width
-        re_l = length
-        while i < 4:
-            re_w = int(re_w / 2)
-            re_l = int(re_l / 2)
-            i += 1
-        reduced_size = re_w * re_l
-        self.cnn = nn.Sequential(
-            # Layer 1
-            nn.Conv2d(1, 8, 4, stride=2, padding=1),       # 1/2
-            nn.ELU(),
-            # Layer 2
-            nn.Conv2d(8, 16, 4, stride=2, padding=1),    # 1/2
-            nn.ELU(),
-            # Layer 3
-            nn.Conv2d(16, 32, 4, stride=2, padding=1),  # 1/2
-            nn.ELU(),
-            # Layer 4
-            nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 1/2
-            nn.ELU(),
-            nn.Flatten()
-            )
-        self.fc_layers = nn.Sequential(
-            nn.Linear(reduced_size * 64, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 512),
-            nn.ReLU(),
-            nn.Linear(512, output_size),
-            nn.ReLU()
-            )
-
-    def forward(self, x):
-        out = self.cnn(x)
-        out = self.fc_layers(out)
-        return out
-
-class Net_v2(nn.Module):
-    def __init__(self, length, width, output_size=128):
-        super().__init__()
-        i = 0
-        re_w = width
-        re_l = length
-        while i < 4:
-            re_w = int(re_w / 2)
-            re_l = int(re_l / 2)
-            i += 1
-        reduced_size = re_w * re_l
-        self.cnn = nn.Sequential(
-            # Layer 1
-            nn.Conv2d(1, 8, 4, stride=2, padding=1),       # 1/2
-            nn.LeakyReLU(),
-            # Layer 2
-            nn.Conv2d(8, 16, 4, stride=2, padding=1),    # 1/2
-            nn.LeakyReLU(),
-            # Layer 3
-            nn.Conv2d(16, 32, 4, stride=2, padding=1),  # 1/2
-            nn.LeakyReLU(),
-            # Layer 4
-            nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 1/2
-            nn.LeakyReLU(),
-            nn.Flatten()
-            )
-        self.fc_layers = nn.Sequential(
-            nn.Linear(reduced_size * 64, 1024),
-            nn.LeakyReLU(),
-            nn.Linear(1024, 512),
-            nn.LeakyReLU(),
-            nn.Linear(512, output_size),
-            # nn.LeakyReLU()
-            )
-
-    def forward(self, x):
-        out = self.cnn(x)
-        out = self.fc_layers(out)
-        return out
+from torchvision.models import resnet34
 
 
 class Net_v3(nn.Module):
-    def __init__(self, length, width, output_size=16):
+    def __init__(self, output_size=16):
         super().__init__()
         # self.cnn = resnet50()
         self.cnn = resnet34()
@@ -102,14 +21,14 @@ class Net_v3(nn.Module):
 
 
 class ConcatImg2Recur(nn.Module):
-    def __init__(self, spa_length, spa_width, ang_length, ang_width, feature_size, img_model, recur_model, device, hidden_size=64, num_layers=1, sequence_length=100):
+    def __init__(self, feature_size, img_model, recur_model, device, hidden_size=64, num_layers=1, sequence_length=100):
         super(ConcatImg2Recur, self).__init__()
         self.num_layers = num_layers
         self.hidden_size  = hidden_size
         self.device = device
 
-        self.spa_cnn = img_model(spa_width, spa_length, feature_size)
-        self.ang_cnn = img_model(ang_width, ang_length, feature_size)
+        self.spa_cnn = img_model(feature_size)
+        self.ang_cnn = img_model(feature_size)
         self.recur = recur_model(2 * feature_size, hidden_size, batch_first=True)
         self.fc1 = nn.Sequential(
             nn.Linear(hidden_size, hidden_size//2),
@@ -164,19 +83,19 @@ class PositionalEncoding(nn.Module):
 
 
 class ConcatImg2Transformer(nn.Module):
-    def __init__(self, spa_length, spa_width, ang_length, ang_width,
-                 feature_size, img_model, recur_model, device, hidden_size=64,
-                 num_layers=1, sequence_length=100, scale=7):
+    def __init__(self,
+                 feature_size, img_model, device, hidden_size=64,
+                 num_layers=1, scale=7):
         super().__init__()
         self.scale = scale
         self.num_layers = num_layers
         self.hidden_size  = hidden_size
         self.device = device
 
-        self.cnn = img_model(spa_width, spa_length, feature_size)
+        self.cnn = img_model(feature_size)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=2*feature_size, nhead=8, dim_feedforward=2048, batch_first=True)
+            d_model=2*feature_size, nhead=8, dim_feedforward=128, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
 
         self.fc1 = nn.Sequential(

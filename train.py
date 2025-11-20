@@ -67,15 +67,15 @@ if __name__ == '__main__':
     recur_model = get_class(config['recur_model']) if config['recur_model'] is not None else ""
 
     if config.get("model_type") == "transformer":
-        cnn2gru = ConcatImg2Transformer(
-            spa_length, spa_width, ang_length, ang_width, f_size, img_model,
-            recur_model, device, h_size, sequence_length=seq_len,
+        CorrFluc = ConcatImg2Transformer(
+            f_size, img_model,
+            device, h_size,
             scale=config.get("dist_scale")
         ).to(device)
 
     else:
-        # cnn2gru = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
-        cnn2gru = ConcatImg2Recur(spa_length, spa_width, ang_length, ang_width, f_size, img_model, recur_model, device, h_size, sequence_length=seq_len).to(device)
+        # CorrFluc = ConcatenatedCNN2GRU(spa_length, spa_width, ang_length, ang_width, f_size, img_model, device, h_size, sequence_length=seq_len).to(device)
+        CorrFluc = ConcatImg2Recur(f_size, img_model, recur_model, device, h_size, sequence_length=seq_len).to(device)
 
     ########################################
     # Loss function
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     ########################################
     # Optimizer & Scheduler
     ########################################
-    optimizer = Adam(list(cnn2gru.parameters()), float(config['lr']), weight_decay=config['weight_decay'])
+    optimizer = Adam(list(CorrFluc.parameters()), float(config['lr']), weight_decay=config['weight_decay'])
 
     scheduler = lr_scheduler.MultiStepLR(
         optimizer, config["step_size"], config["gamma"])
@@ -122,13 +122,13 @@ if __name__ == '__main__':
         print('EPOCH {}:'.format(epoch_number + 1))
 
         # Make sure gradient tracking is on, and do a pass over the data
-        cnn2gru.train(True)
-        avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, cnn2gru, loss_func, device)
+        CorrFluc.train(True)
+        avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, CorrFluc, loss_func, device)
 
         running_vloss = 0.0
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
-        cnn2gru.eval()
+        CorrFluc.eval()
 
         # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
@@ -138,7 +138,7 @@ if __name__ == '__main__':
                 val_ang = val_ang.to(device)
                 vlabels = vlabels.to(device).float()
 
-                voutputs = cnn2gru(val_spa, val_ang)
+                voutputs = CorrFluc(val_spa, val_ang)
                 vloss = loss_func(voutputs, vlabels.reshape(-1, 1))
                 running_vloss += vloss
 
@@ -158,8 +158,8 @@ if __name__ == '__main__':
         # Track best performance, and save the model's state
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss
-            model_path = 'cnn2gru_{}_{}'.format(timestamp, epoch_number+1)
-            torch.save(cnn2gru.state_dict(), join(save_root, model_path))
+            model_path = 'CorrFluc_{}_{}'.format(timestamp, epoch_number)
+            torch.save(CorrFluc.state_dict(), join(save_root, model_path))
 
         epoch_number += 1
         scheduler.step()
