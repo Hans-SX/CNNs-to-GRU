@@ -134,3 +134,96 @@ class ConcatImg2Transformer(nn.Module):
         if self.scale:
             out = torch.tanh(out) * self.scale
         return out
+
+
+#############################################
+# Self attention
+#############################################
+class BiCrossAtt(nn.Module):
+    def __init__(self,
+                 feature_size, img_model, device, hidden_size=64,
+                 num_layers=1, scale=7):
+        super().__init__()
+        self.scale = scale
+        self.num_layers = num_layers
+        self.hidden_size  = hidden_size
+        self.device = device
+
+        self.cnn = img_model(feature_size)
+
+        # Projects disparate CNN features into a shared embedding space
+        self.proj_spa = nn.Sequential(
+            nn.Linear(feature_size, feature_size),
+            nn.LeakyReLU(),
+            nn.LayerNorm(feature_size),
+            nn.Dropout(0.5),)
+
+        self.proj_ang = nn.Sequential(
+            nn.Linear(feature_size, feature_size),
+            nn.LeakyReLU(),
+            nn.LayerNorm(feature_size),
+            nn.Dropout(0.5),)
+
+        self.attn_spa_to_ang = nn.MultiheadAttention(
+            embed_dim=feature_size, num_heads=2, batch_first=True, dropout=0.1)
+        self.attn_ang_to_spa = nn.MultiheadAttention(
+            embed_dim=feature_size, num_heads=2, batch_first=True, dropout=0.1)
+
+        # 4. Post-Attention Processing (FFN + Norm)
+        self.norm1 = nn.LayerNorm(feature_size)
+        self.norm2 = nn.LayerNorm(feature_size)
+        self.ffn = nn.Sequential(
+            nn.Linear(feature_size * 2, feature_size * 2), # *2 because we concat both directions
+            nn.LeakyReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(feature_size * 2, feature_size))
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(feature_size, hidden_size),
+            nn.LeakyReLU(),
+            # nn.LayerNorm(hidden_size),
+            nn.Linear(hidden_size, 1))
+
+    def forward_visual_features(self, spa, ang):
+        Bs, Ts, Cs, Hs, Ws = spa.shape
+        Ba, Ta, Ca, Ha, Wa = ang.shape
+
+        spa = spa.view(Bs*Ts, Cs, Hs, Ws)
+        ang = ang.view(Ba*Ta, Ca, Ha, Wa)
+
+        spa_feature = self.cnn(spa).view(Bs, Ts, -1)
+        ang_feature = self.cnn(ang).view(Ba, Ta, -1)
+
+        # features = torch.cat((spa_feature, ang_feature), dim=2)  # (B, seq_len, 2*feature_size)
+        return spa_feature, ang_feature
+
+    def forward(self, spa, ang):
+        """ spa: (B, seq_len, 1, 140, 100), ang: (B, seq_len, 1, 125, 125) """
+
+        spa_feature, ang_feature = self.forward_visual_features(spa, ang)   # (B, seq_len, 2*feature_size)
+
+        spa_feature = self.proj_spa(spa_feature)
+        ang_feature = self.proj_ang(ang_feature)
+
+        # Bidirectional Cross Attention
+        # Direction 1: How spa relates to ang
+        out_spa, _ = self.attn_spa_to_ang(query=spa_feature, key=ang_feature, value=ang_feature)
+        out_spa = self.norm1(out_spa + spa_feature) # Residual connection
+
+        # Direction 2: How ang relates to spa
+        out_ang, _ = self.attn_ang_to_spa(query=ang_feature, key=spa_feature, value=spa_feature)
+        out_ang = self.norm2(out_ang + ang_feature) # Residual connection
+
+        # Pool over the sequence dimension
+        pool_spa = out_spa.mean(dim=1)      # [B, Dim]
+        pool_ang = out_ang.mean(dim=1)      # [B, Dim]
+
+        # Concatenate both perspectives
+        combined = torch.cat([pool_spa, pool_ang], dim=1) # [B, Dim*2]
+
+        out = self.ffn(combined) # Compress back to [B, Dim]
+
+        out = self.fc1(out)
+        if self.scale:
+            out = torch.tanh(out) * self.scale
+        return out

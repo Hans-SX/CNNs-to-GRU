@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
-from model.network import ConcatImg2Recur, ConcatImg2Transformer
+from model.network import ConcatImg2Recur, ConcatImg2Transformer, BiCrossAtt
 from dataset.HFramesSet import Hframes_Interval
 from utils import get_class, train_one_epoch
 
@@ -68,6 +68,13 @@ if __name__ == '__main__':
 
     if config.get("model_type") == "transformer":
         CorrFluc = ConcatImg2Transformer(
+            f_size, img_model,
+            device, h_size,
+            scale=config.get("dist_scale")
+        ).to(device)
+
+    elif config.get("model_type") == "BiCrossAtt":
+        CorrFluc = BiCrossAtt(
             f_size, img_model,
             device, h_size,
             scale=config.get("dist_scale")

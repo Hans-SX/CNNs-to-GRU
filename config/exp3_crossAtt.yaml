@@ -1,0 +1,36 @@
+---
+exp_name: 'sim_resnet34_crossatt_lr1e-5_MSELoss'
+
+model_type: BiCrossAtt
+
+img_model: 'model.network.Net_v3'
+
+recur_model:
+
+# Input parameters.
+spa_width: 153
+spa_length: 153
+ang_width: 128
+ang_length: 128
+
+feature_size: 128
+hidden_size: 64
+sequence_length: 100
+
+dist_scale: 10                   # The distance range
+
+# Hyperparameters
+EPOCHS: 50
+# max_epoch: 100
+batch_size: 8
+num_workers: 8
+weight_decay: 0.5                     # Weight decay.
+lr: 1e-5                          # Initial learning rate.
+
+# lr_scheduler.MultiStepLR
+step_size: [20, 35]                 # How often to decay learning rate.
+gamma: 0.5                          # How much to decay learning rate.
+
+# lr_scheduler.CosineAnnealingLR
+# eta_min: 0.0001                     # Minimum learning rate.
+# Tmax: 30                            # Periodic epochs of reducing learning rate.
