@@ -44,7 +44,7 @@ def train_one_epoch(epoch_index, tb_writer, dataloader, optimizer, model,
         # Gather data and report
         running_loss += loss.item()
         if i % 50 == 49:
-            last_loss = running_loss / 10 # loss per batch
+            last_loss = running_loss / 50 # loss per batch
             print('batch {} loss: {}'.format(i + 1, last_loss))
             tb_x = epoch_index * len(dataloader) + i + 1
             # tb_writer.add_scalar('Loss/train', last_loss, tb_x)

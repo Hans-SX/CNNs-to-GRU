@@ -80,7 +80,7 @@ if __name__ == '__main__':
     ########################################
     # Loss function
     ########################################
-    # loss_func = nn.L1Loss()
+    L1metric = nn.L1Loss()
     loss_func = nn.MSELoss()
 
     ########################################
@@ -141,8 +141,11 @@ if __name__ == '__main__':
                 voutputs = CorrFluc(val_spa, val_ang)
                 vloss = loss_func(voutputs, vlabels.reshape(-1, 1))
                 running_vloss += vloss
+                vL1 = L1metric(voutputs, vlabels.reshape(-1, 1))
+                running_vl1 += vL1
 
         avg_vloss = running_vloss / (i + 1)
+        avg_vl1 = running_vl1 / (i + 1)
         print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
 
         # Log the running loss averaged per batch
@@ -152,13 +155,14 @@ if __name__ == '__main__':
         #                 epoch_number + 1)
         writer.add_scalar(f"train/avg_loss", avg_loss, epoch_number + 1)
         writer.add_scalar(f"val/avg_loss", avg_vloss, epoch_number + 1)
+        writer.add_scalar(f"val/avg_L1", avg_vl1, epoch_number + 1)
 
         writer.flush()
 
         # Track best performance, and save the model's state
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss
-            model_path = 'CorrFluc_{}_{}'.format(timestamp, epoch_number)
+            model_path = 'CorrFluc_{}_{}'.format(timestamp, epoch_number + 1)
             torch.save(CorrFluc.state_dict(), join(save_root, model_path))
 
         epoch_number += 1
