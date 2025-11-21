@@ -133,6 +133,7 @@ if __name__ == '__main__':
         avg_loss = train_one_epoch(epoch_number, writer, trainloader, optimizer, CorrFluc, loss_func, device)
 
         running_vloss = 0.0
+        running_vl1 = 0.0
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
         CorrFluc.eval()

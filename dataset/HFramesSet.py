@@ -23,6 +23,13 @@ class Hframes_Interval(Dataset):
                     path, dis = line.strip().split()
                     self.spa.append(path)
                     self.label.append(round(float(dis), 2))
+        elif typeset == 'test':
+            with open(r'C:\sxyang\CNNs-to-GRU\data\nn_data_1k_test\tiff_paths.txt', 'r') as f:
+                for line in f:
+                    path, dis = line.strip().split()
+                    self.spa.append(path)
+                    self.label.append(round(float(dis), 2))
+                    
         self.ang = [x.replace('spatial', 'angular').replace('DetectorA', 'DetectorB') for x in self.spa]
 
     def __len__(self):
